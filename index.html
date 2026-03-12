@@ -54,6 +54,11 @@ body{font-family:'Inter',sans-serif;background:#f5f5f5;color:#0a0a0a;padding:20p
     </div>
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px;">
       <button id="c3cPlayBtn" onclick="c3cToggle()" style="padding:6px 16px;border-radius:8px;border:1px solid #e5e5e5;background:#0a0a0a;color:#fff;font-size:12px;font-weight:600;cursor:pointer;min-width:80px;">&#9654; Play</button>
+      <div id="speedBtns" style="display:flex;border:1px solid #e5e5e5;border-radius:8px;overflow:hidden;flex-shrink:0;">
+        <button onclick="setSpeed(0.5)" id="spd05" style="padding:5px 10px;font-size:11px;font-weight:600;border:none;cursor:pointer;background:#fff;color:#525252;">0.5x</button>
+        <button onclick="setSpeed(1)" id="spd1" style="padding:5px 10px;font-size:11px;font-weight:600;border:none;cursor:pointer;background:#0a0a0a;color:#fff;">1x</button>
+        <button onclick="setSpeed(2)" id="spd2" style="padding:5px 10px;font-size:11px;font-weight:600;border:none;cursor:pointer;background:#fff;color:#525252;">2x</button>
+      </div>
       <input type="range" id="c3cSlider" min="0" max="7" value="0" step="1" style="flex:1;accent-color:#2563eb;" oninput="c3cOnSlider(parseInt(this.value))">
       <div id="c3cLabel" style="font-size:15px;font-weight:700;color:#0a0a0a;min-width:220px;text-align:right;">2025.07</div>
     </div>
@@ -112,7 +117,8 @@ const HM=8;
 const mLabels=["2025.07", "2025.08", "2025.09", "2025.10", "2025.11", "2025.12", "2026.01", "2026.02"];
 const cv=document.getElementById('c3cCanvas'),ctx=cv.getContext('2d'),wrap=document.getElementById('c3cWrap'),tip=document.getElementById('c3cTip');
 const P={left:60,top:20,right:20,bottom:50};
-let hM=0,hT=0,hPlay=false,hAId=null,hLT=0,hBUA=null,hBNA=null;
+let hM=0,hT=0,hPlay=false,hAId=null,hLT=0,hBUA=null,hBNA=null,hStarted=false,hSpeed=1;
+window.setSpeed=function(s){hSpeed=s;document.getElementById('spd05').style.background=s===0.5?'#0a0a0a':'#fff';document.getElementById('spd05').style.color=s===0.5?'#fff':'#525252';document.getElementById('spd1').style.background=s===1?'#0a0a0a':'#fff';document.getElementById('spd1').style.color=s===1?'#fff':'#525252';document.getElementById('spd2').style.background=s===2?'#0a0a0a':'#fff';document.getElementById('spd2').style.color=s===2?'#fff':'#525252';};
 function rs(){const r=wrap.getBoundingClientRect();const d=devicePixelRatio||1;cv.width=r.width*d;cv.height=r.height*d;cv.style.width=r.width+'px';cv.style.height=r.height+'px';ctx.setTransform(d,0,0,d,0,0);return r;}
 let xScaleMode='log';
 const XMAX=3000;
@@ -143,6 +149,7 @@ function draw(){
   ctx.strokeStyle='#f0f0f0';ctx.lineWidth=1;for(let yv=0;yv<=7;yv++){const cy=toY(yv,h);ctx.beginPath();ctx.moveTo(P.left,cy);ctx.lineTo(w-P.right,cy);ctx.stroke();ctx.fillStyle='#a3a3a3';ctx.font='10px Inter';ctx.textAlign='right';ctx.fillText(yv+'일',P.left-6,cy+3);}
   const xT=xScaleMode==='linear'?[0,200,500,1000,1500,2000,2500,3000]:[1,5,10,50,100,300,500,1000,3000];for(const xv of xT){const cx=toX(xv,w);if(cx<P.left-1||cx>w-P.right+1)continue;ctx.beginPath();ctx.moveTo(cx,P.top);ctx.lineTo(cx,h-P.bottom);ctx.stroke();ctx.fillStyle='#a3a3a3';ctx.font='10px Inter';ctx.textAlign='center';ctx.fillText(xv>=1000?(xv/1000)+'K':xv+'',cx,h-P.bottom+14);}
   ctx.strokeStyle='#d4d4d4';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(P.left,P.top);ctx.lineTo(P.left,h-P.bottom);ctx.lineTo(w-P.right,h-P.bottom);ctx.stroke();
+  if(!hStarted){document.getElementById('c3cLabel').textContent='▶ Play를 눌러 시작';return;}
   const mF=hM+hT;const miA=Math.floor(mF),miB=Math.min(miA+1,HM-1),t=mF-miA;
   let uPts,nPts;
   if(t>0.001&&miA<HM-1){uPts=interpSnap(hU,miA,miB,t);nPts=interpSnap(hN,miA,miB,t);}else{uPts=getSnap(hU,miA);nPts=getSnap(hN,miA);}
@@ -201,9 +208,9 @@ function draw(){
   const mi=Math.round(mF);document.getElementById('c3cLabel').textContent=(mLabels[mi]||'')+ ' · 사용 '+uPts.length+'개 / 미사용 '+nPts.length+'개';
   document.getElementById('c3cSlider').value=hM;
 }
-function c3cOnSlider(v){hM=v;hT=0;draw();}window.c3cOnSlider=c3cOnSlider;
-function anim(ts){if(!hPlay)return;if(!hLT)hLT=ts;hT+=(ts-hLT)/1200;hLT=ts;while(hT>=1){hT-=1;hM++;if(hM>=HM-1){hM=HM-1;hT=0;hPlay=false;document.getElementById('c3cPlayBtn').innerHTML='&#9654; Play';document.getElementById('c3cPlayBtn').style.background='#0a0a0a';draw();return;}}draw();hAId=requestAnimationFrame(anim);}
-window.c3cToggle=function(){const b=document.getElementById('c3cPlayBtn');if(hPlay){hPlay=false;if(hAId)cancelAnimationFrame(hAId);b.innerHTML='&#9654; Play';b.style.background='#0a0a0a';}else{if(hM>=HM-1){hM=0;hT=0;hBUA=null;hBNA=null;}hPlay=true;hLT=0;b.innerHTML='&#9724; Stop';b.style.background='#ef4444';hAId=requestAnimationFrame(anim);}};
+function c3cOnSlider(v){hStarted=true;hM=v;hT=0;draw();}window.c3cOnSlider=c3cOnSlider;
+function anim(ts){if(!hPlay)return;if(!hLT)hLT=ts;hT+=(ts-hLT)*hSpeed/1200;hLT=ts;while(hT>=1){hT-=1;hM++;if(hM>=HM-1){hM=HM-1;hT=0;hPlay=false;document.getElementById('c3cPlayBtn').innerHTML='&#9654; Play';document.getElementById('c3cPlayBtn').style.background='#0a0a0a';draw();return;}}draw();hAId=requestAnimationFrame(anim);}
+window.c3cToggle=function(){const b=document.getElementById('c3cPlayBtn');if(hPlay){hPlay=false;if(hAId)cancelAnimationFrame(hAId);b.innerHTML='&#9654; Play';b.style.background='#0a0a0a';}else{if(hM>=HM-1){hM=0;hT=0;hBUA=null;hBNA=null;}hStarted=true;hPlay=true;hLT=0;b.innerHTML='&#9724; Stop';b.style.background='#ef4444';hAId=requestAnimationFrame(anim);}};
 wrap.addEventListener('mousemove',(e)=>{const r=wrap.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top,w=r.width,h=r.height;const mi=Math.floor(hM+hT);const allPts=[...getSnap(hU,mi),...getSnap(hN,mi)];let cl=null,md=20;for(const p of allPts){const cx=toX(p.x,w),cy=toY(p.y,h),dist=Math.sqrt((mx-cx)**2+(my-cy)**2);if(dist<md){md=dist;cl={x:Math.round(p.x),y:p.y.toFixed(2),cx,cy,id:p.id};}}if(cl){tip.style.display='block';tip.innerHTML='<b>'+cl.id+'</b> · '+cl.x+'건 · '+cl.y+'일';tip.style.left=(cl.cx-tip.offsetWidth/2)+'px';tip.style.top=(cl.cy-tip.offsetHeight-10)+'px';}else tip.style.display='none';});
 wrap.addEventListener('mouseleave',()=>{tip.style.display='none';});
 
@@ -417,6 +424,7 @@ function drawSC(cv,sctx,wrapEl,uData,nData,yLbl,fmt,yMinOverride){
 }
 
 function drawSubCharts(){
+  if(!hStarted)return;
   drawSC(scShipCv,scShipCtx,scShipWrap,mSt.u.shp,mSt.n.shp,'출고소요시간 (일)',function(v){return v.toFixed(1)+'일';},0.3);
   drawSC(scOrdCv,scOrdCtx,scOrdWrap,mSt.u.ord,mSt.n.ord,'주간 평균 주문수',function(v){return v>=1000?(v/1000).toFixed(1)+'K':Math.round(v)+'';});
 }
